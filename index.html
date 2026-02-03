@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Egy kérdés</title>
+
+<style>
+:root{
+  --bg1:#f5f7fa; --bg2:#c3cfe2;
+  --card:#fff; --shadow:rgba(0,0,0,.15);
+  --yes:#2fbf71; --no:#ff4d4d;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh;
+  display:flex; justify-content:center; align-items:center;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2));
+  font-family:system-ui,Segoe UI,Roboto;
+  padding:18px;
+  overflow-x:hidden;
+}
+.card{
+  width:min(94vw,900px);
+  background:var(--card);
+  border-radius:22px;
+  padding:26px;
+  box-shadow:0 20px 50px var(--shadow);
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+h1{margin:0 0 10px}
+p{margin:0 0 18px;color:#444}
+
+.btns{position:relative;min-height:120px}
+button{
+  border:0;padding:12px 18px;border-radius:999px;
+  font-weight:800;font-size:16px;cursor:pointer
+}
+#yes{background:var(--yes);color:#fff}
+#no{
+  background:var(--no);color:#fff;position:absolute;
+  transition:.18s;
+}
+.jitter{transform:rotate(-2deg) scale(1.05)}
+
+.fade-out{animation:fadeOut .3s forwards}
+.fade-in{animation:fadeIn .4s forwards}
+@keyframes fadeOut{to{opacity:0;transform:translateY(-14px)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(18px)}to{opacity:1}}
+
+.result{display:none}
+.thanks{position:sticky;top:0;background:#fff;z-index:3;padding-bottom:12px}
+.thanks h1{text-shadow:0 0 12px rgba(255,120,180,.35)}
+
+.images{
+  display:grid;
+  gap:14px;
+  grid-template-columns:repeat(2,1fr);
+}
+@media(min-width:600px){.images{grid-template-columns:repeat(4,1fr)}}
+
+.tile{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+img{
+  width:100%;
+  aspect-ratio:1/1;
+  object-fit:cover;
+  border-radius:14px;
+  box-shadow:0 10px 20px rgba(0,0,0,.15);
+  opacity:0;
+  transform:translateY(-120vh) rotate(var(--r)) scale(.96);
+  will-change: transform, opacity;
+}
+img.show{
+  animation:drop .85s cubic-bezier(.22,1.05,.3,1) forwards;
+  animation-delay:var(--d)
+}
+@keyframes drop{
+  65%{opacity:1;transform:translateY(14px) rotate(calc(var(--r)*-.4)) scale(1.04)}
+  85%{transform:translateY(-6px) rotate(var(--r))}
+  100%{opacity:1;transform:translateY(0) rotate(var(--r))}
+}
+
+/* FELIRAT */
+.caption{
+  margin-top:6px;
+  font-size:13px;
+  color:#555;
+  text-align:center;
+}
+
+/* ===== POTYOGÓ SZÍVECSKÉK ===== */
+.hearts{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 9999;
+}
+.heart{
+  position: absolute;
+  top: -40px;
+  left: var(--hx, 50vw);
+  font-size: var(--hs, 18px);
+  opacity: .95;
+  transform: translate3d(0,0,0) rotate(var(--hr, 0deg));
+  filter: drop-shadow(0 8px 10px rgba(0,0,0,.12));
+  animation: heartFall var(--ht, 1600ms) linear forwards;
+}
+@keyframes heartFall{
+  to{
+    transform: translate3d(0, 110vh, 0) rotate(calc(var(--hr, 0deg) + 220deg));
+    opacity: 0;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- szívecske layer -->
+<div class="hearts" id="hearts"></div>
+
+<!-- 1. oldal -->
+<div class="card" id="card">
+  <h1>Folytatjuk együtt? 💖</h1>
+  <p>Csak egy gyors kérdés…</p>
+  <div class="btns" id="arena">
+    <button id="yes">Igen</button>
+    <button id="no">Nem</button>
+  </div>
+</div>
+
+<!-- 2. oldal -->
+<div class="card result" id="result">
+  <div class="thanks">
+    <h1>Éljük át újra! 🥰</h1>
+    <p>Történetünk képekben... ❤️</p>
+  </div>
+  <div class="images" id="images"></div>
+</div>
+
+<script>
+const images = document.getElementById("images");
+const yes = document.getElementById("yes");
+const no = document.getElementById("no");
+const arena = document.getElementById("arena");
+const card = document.getElementById("card");
+const result = document.getElementById("result");
+
+const heartsWrap = document.getElementById("hearts");
+const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const rand = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+
+/* Feliratok (csak ahol kell, a többi üres maradhat) */
+const captions = {
+  1: "Első tali a gólyabuliban",
+  2: "Első közös kirándulás – Zebegény",
+  3: "Első tali a barátokkal",
+  4: "Első közös nyaralás – Miskolctapolca",
+  5: "Első közös nyaralás – Lillafüred",
+  6: "Első közös nyaralás – Lillafüred",
+  7: "Közös kondi",
+  8: "Szentendrei kirándulás",
+  9: "Ozora kirándulás",
+  10: "Dégi kirándulás",
+  11: "Dégi kirándulás",
+  12: "Veszprémi múzeumlátogatás",
+  13: "Téli Siófok",
+  14: "Balcsipart",
+  15: "Hévízi nyaralás",
+  16: "Közös főzőcskézés",
+  17: "A két kedvenc cukiságom",
+  18: "Úristen, veribiiig",
+  19: "Velecei wellness",
+  20: "Kocsimosás",
+  24: "Éjszakai kocsikázás Vácon",
+  25: "Halloweeni buli",
+  26: "Siófoki romcsizás",
+  27: "Első tali a barátokkal"
+};
+
+/*
+  ÚJ SORREND:
+  - 27 a 3. után
+  - 26 a 8. után
+  - 24 utolsó előtti
+  - 25 utolsó
+  - 21–23 NINCS (random szelfik)
+*/
+const order = [
+  1, 2, 3,
+  27,          // legutolsó kép a 3. után
+  4, 5, 6, 7, 8,
+  26,          // utolsó előtti kép a 8. után
+  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+  24,          // Éjszakai kocsikázás Vácon -> utolsó előtti
+  25           // Halloween -> utolsó
+];
+
+function addTile(imgNumber, index){
+  const tile=document.createElement("div");
+  tile.className="tile";
+
+  const img=document.createElement("img");
+  img.src=`${String(imgNumber).padStart(2,"0")}.jpg`;
+  img.style.setProperty("--d",`${index*80}ms`);
+  img.style.setProperty("--r",`${rand(-10,10)}deg`);
+
+  tile.appendChild(img);
+
+  if(captions[imgNumber]){
+    const cap=document.createElement("div");
+    cap.className="caption";
+    cap.textContent=captions[imgNumber];
+    tile.appendChild(cap);
+  }
+
+  images.appendChild(tile);
+}
+
+/* Render */
+order.forEach((n, idx) => addTile(n, idx));
+
+/* NEM gomb menekül */
+function moveNo(){
+  const r=arena.getBoundingClientRect();
+  no.classList.add("jitter");
+  no.style.left=Math.random()*(r.width-80)+"px";
+  no.style.top=Math.random()*(r.height-40)+"px";
+  setTimeout(()=>no.classList.remove("jitter"),120);
+}
+no.onmouseover=moveNo;
+no.ontouchstart=e=>{e.preventDefault();moveNo()};
+
+/* Szívecskék */
+function spawnHearts(durationMs = 3500){
+  const endAt = Date.now() + durationMs;
+  const emojis = ["💗","💖","💘","💞","💕","❤️"];
+
+  const timer = setInterval(() => {
+    const now = Date.now();
+    const count = randInt(2, 4);
+
+    for(let k=0;k<count;k++){
+      const h = document.createElement("div");
+      h.className = "heart";
+      h.textContent = pick(emojis);
+
+      h.style.setProperty("--hx", `${randInt(2, 98)}vw`);
+      h.style.setProperty("--hs", `${randInt(14, 26)}px`);
+      h.style.setProperty("--hr", `${randInt(-25, 25)}deg`);
+      h.style.setProperty("--ht", `${randInt(1100, 1900)}ms`);
+
+      heartsWrap.appendChild(h);
+      setTimeout(()=>h.remove(), 2200);
+    }
+
+    if(now >= endAt) clearInterval(timer);
+  }, 110);
+}
+
+/* IGEN */
+yes.onclick=()=>{
+  spawnHearts(3500);
+
+  card.classList.add("fade-out");
+  setTimeout(()=>{
+    card.style.display="none";
+    result.style.display="block";
+    result.classList.add("fade-in");
+
+    document.querySelectorAll("img").forEach((img)=>{
+      img.classList.add("show");
+    });
+  },320);
+};
+</script>
+
+</body>
+</html>
